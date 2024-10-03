@@ -3,76 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CA Server</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Gestor de Certificados</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <h1>Bienvenido al Servidor CA</h1>
-    
-    <h2>Generar CA</h2>
-    <form id="generate_ca_form">
-        <button type="submit">Generar CA</button>
-    </form>
-    <div id="generate_ca_response"></div>
+    <div class="container">
+        <h1 class="mt-5">Gestor de Certificados</h1>
 
-    <h2>Firmar Certificado</h2>
-    <form id="sign_cert_form">
-        <label for="common_name">Nombre Común:</label>
-        <input type="text" id="common_name" name="common_name" required>
-        <button type="submit">Firmar Certificado</button>
-    </form>
-    <div id="sign_cert_response"></div>
+        <div class="mt-4">
+            <h2>Listar Certificados</h2>
+            <a href="/list_certs" class="btn btn-primary">Ver Certificados</a>
+        </div>
 
-    <h2>Comprobar Certificado</h2>
-    <form id="check_cert_form">
-        <label for="cert_path">Ruta del Certificado:</label>
-        <input type="text" id="cert_path" name="cert_path" required>
-        <button type="submit">Comprobar Certificado</button>
-    </form>
-    <div id="check_cert_response"></div>
-
-    <script>
-        // Manejo de la generación de la CA
-        $('#generate_ca_form').on('submit', function(event) {
-            event.preventDefault();
-            $.ajax({
-                type: 'POST',
-                url: '/generate_ca',
-                success: function(response) {
-                    $('#generate_ca_response').html(response);
-                }
-            });
-        });
-
-        // Manejo de la firma de certificados
-        $('#sign_cert_form').on('submit', function(event) {
-            event.preventDefault();
-            $.ajax({
-                type: 'POST',
-                url: '/sign_cert',
-                data: {
-                    common_name: $('#common_name').val()
-                },
-                success: function(response) {
-                    $('#sign_cert_response').html(response);
-                }
-            });
-        });
-
-        // Manejo de la comprobación de certificados
-        $('#check_cert_form').on('submit', function(event) {
-            event.preventDefault();
-            $.ajax({
-                type: 'POST',
-                url: '/check_cert',
-                data: {
-                    cert_path: $('#cert_path').val()
-                },
-                success: function(response) {
-                    $('#check_cert_response').html(response);
-                }
-            });
-        });
-    </script>
+        {% if valid_certs %}
+        <h3 class="mt-4">Certificados Válidos:</h3>
+        <ul class="list-group mt-2">
+            {% for cert in valid_certs %}
+            <li class="list-group-item">{{ cert }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No hay certificados válidos encontrados.</p>
+        {% endif %}
+    </div>
 </body>
 </html>
