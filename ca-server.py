@@ -1,7 +1,8 @@
 import argparse
-import datetime
-import subprocess
 import configparser
+import datetime
+import os
+import subprocess
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.backends import default_backend
@@ -9,75 +10,99 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
 
-# Cargar la configuración desde el archivo
-def load_config(config_file):
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    return config
-
 # Generar una clave privada RSA
 def generate_private_key():
-    pass  # Implementar generación de clave privada
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    return private_key
 
 # Generar un certificado autofirmado para la CA
-def generate_ca_cert(private_key):
-    pass  # Implementar generación de certificado de CA
+def generate_ca_cert(private_key, validity_days):
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, u"ES"),
+        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Madrid"),
+        x509.NameAttribute(NameOID.LOCALITY_NAME, u"Madrid"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Example"),
+        x509.NameAttribute(NameOID.COMMON_NAME, u"Example Root CA"),
+    ])
+    
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    ca_cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        private_key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        now
+    ).not_valid_after(
+        now + datetime.timedelta(days=validity_days)
+    ).add_extension(
+        x509.BasicConstraints(ca=True, path_length=None), critical=True,
+    ).sign(private_key, hashes.SHA256(), default_backend())
+    
+    return ca_cert
 
 # Guardar clave privada y certificado en archivos
 def save_to_files(private_key, cert, key_filename, cert_filename):
-    pass  # Implementar guardado en archivos
-
-# Firmar un certificado de servidor con la CA
-def sign_certificate(common_name, ca_private_key, ca_cert):
-    pass  # Implementar firma de certificado
-
-# Cargar un certificado desde un archivo
-def load_cert(cert_file):
-    pass  # Implementar carga de certificado
-
-# Cargar una clave privada desde un archivo
-def load_private_key(key_file):
-    pass  # Implementar carga de clave privada
+    # Guardar la clave privada en un archivo
+    with open(key_filename, "wb") as f:
+        f.write(private_key.private_bytes(
+            encoding=Encoding.PEM,
+            format=PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=NoEncryption()
+        ))
+    
+    # Guardar el certificado en un archivo
+    with open(cert_filename, "wb") as f:
+        f.write(cert.public_bytes(Encoding.PEM))
 
 # Función principal
 def main():
     parser = argparse.ArgumentParser(description="CA Tool: Generar CA y firmar certificados.")
-    subparsers = parser.add_subparsers(dest="command", help="Comandos")
+    parser.add_argument('command', choices=['generate_ca'], help="Comando a ejecutar")
 
-    # Comando para generar la CA
-    parser_ca = subparsers.add_parser("generate_ca", help="Generar una nueva CA.")
-    parser_ca.add_argument("--ca-key", default="ca/ca_keys/ca_key.pem", help="Archivo para guardar la clave privada de la CA.")
-    parser_ca.add_argument("--ca-cert", default="ca/to/ca_certs/ca_cert.pem", help="Archivo para guardar el certificado de la CA.")
-
-    # Comando para firmar certificados
-    parser_sign = subparsers.add_parser("sign_cert", help="Firmar un certificado de servidor.")
-    parser_sign.add_argument("--common-name", required=True, help="Nombre común (Common Name) para el certificado.")
-    parser_sign.add_argument("--ca-key", default="ca/ca_keys/ca_key.pem", help="Clave privada de la CA.")
-    parser_sign.add_argument("--ca-cert", default="ca/to/ca_certs/ca_cert.pem", help="Certificado de la CA.")
-    parser_sign.add_argument("--output-key", default="server/server_keys/server_key.pem", help="Archivo para guardar la clave privada del servidor.")
-    parser_sign.add_argument("--output-cert", default="server/server_certs/server_cert.pem", help="Archivo para guardar el certificado del servidor.")
-
-    # Cargar la configuración
-    parser.add_argument("--config", default="ca-server.conf", help="Archivo de configuración.")
-
-    args = parser.parse_args()
-    config = load_config(args.config)
+    # Leer el archivo de configuración
+    config = configparser.ConfigParser()
+    config.read('ca-server.conf')
 
     # Obtener la información de configuración
-    ca_info = config['ca']
-    cert_info = config['cert']
     directories = config['directories']
 
+    # Definir args para el uso posterior
+    args = parser.parse_args()
+
     if args.command == "generate_ca":
+        # Obtener las rutas de los directorios y limpiarlas
+        ca_key_directory = directories['ca_key_directory'].strip()
+        ca_cert_directory = directories['ca_cert_directory'].strip()
+        server_key_directory = directories['server_key_directory'].strip()
+
+        # Crear directorios si no existen
+        os.makedirs(ca_key_directory, exist_ok=True)
+        os.makedirs(ca_cert_directory, exist_ok=True)
+        os.makedirs(server_key_directory, exist_ok=True)
+
+        # Obtener información de validez
+        validity_days = config['cert'].getint('validity_days')
+
         # Lógica para generar la CA
-        pass  # Implementar lógica de generación de CA
-
-    elif args.command == "sign_cert":
-        # Lógica para firmar un certificado de servidor
-        pass  # Implementar lógica de firma de certificado
-
-    else:
-        parser.print_help()
+        ca_private_key = generate_private_key()
+        ca_cert = generate_ca_cert(ca_private_key, validity_days)
+        
+        # Guardar los archivos en los directorios correctos
+        ca_key_path = os.path.join(ca_key_directory, 'ca_key.pem')
+        ca_cert_path = os.path.join(ca_cert_directory, 'ca_cert.pem')
+        
+        save_to_files(ca_private_key, ca_cert, ca_key_path, ca_cert_path)
+        
+        print(f"CA generada y guardada en {ca_key_path} y {ca_cert_path}")
 
 if __name__ == "__main__":
     main()
