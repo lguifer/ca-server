@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Certificados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #007BFF;
+        }
+        form {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            color: red;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestión de Certificados</h1>
+    <nav>
+        <a href="#generate_ca">Generar CA</a>
+        <a href="#sign_cert">Firmar Certificado</a>
+        <a href="#check_cert">Comprobar Certificado</a>
+        <a href="#send_certs">Enviar Certificados</a>
+    </nav>
+
+    <div id="generate_ca">
+        <h2>Generar CA</h2>
+        <form action="/generate_ca" method="POST">
+            <button type="submit">Generar CA</button>
+        </form>
+    </div>
+
+    <div id="sign_cert">
+        <h2>Firmar Certificado</h2>
+        <form action="/sign_cert" method="POST">
+            <label for="common_name">Nombre Común:</label>
+            <input type="text" name="common_name" required>
+            <label for="output_key">Archivo de clave privada:</label>
+            <input type="text" name="output_key" value="server_key.pem">
+            <label for="output_cert">Archivo de certificado:</label>
+            <input type="text" name="output_cert" value="server_cert.pem">
+            <button type="submit">Firmar Certificado</button>
+        </form>
+    </div>
+
+    <div id="check_cert">
+        <h2>Comprobar Certificado</h2>
+        <form action="/check_cert" method="POST">
+            <label for="cert_path">Ruta del certificado:</label>
+            <input type="text" name="cert_path" required>
+            <button type="submit">Comprobar Certificado</button>
+        </form>
+    </div>
+
+    <div id="send_certs">
+        <h2>Enviar Certificados</h2>
+        <form action="/send_certs" method="POST">
+            <label for="destination_ip">IP de destino:</label>
+            <input type="text" name="destination_ip" required>
+            <label for="cert_file">Archivo de certificado:</label>
+            <input type="text" name="cert_file" required>
+            <label for="key_file">Archivo de clave privada:</label>
+            <input type="text" name="key_file" required>
+            <button type="submit">Enviar Certificados</button>
+        </form>
+    </div>
+
+    <!-- Mensajes de resultados -->
+    <div id="messages">
+        <div class="message" id="success-message">Aquí se mostrarán los mensajes de éxito.</div>
+        <div class="message" id="error-message">Aquí se mostrarán los mensajes de error.</div>
+    </div>
+    
+</body>
+</html>

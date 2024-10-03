@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA Server</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Bienvenido al Servidor CA</h1>
+    
+    <h2>Generar CA</h2>
+    <form id="generate_ca_form">
+        <button type="submit">Generar CA</button>
+    </form>
+    <div id="generate_ca_response"></div>
+
+    <h2>Firmar Certificado</h2>
+    <form id="sign_cert_form">
+        <label for="common_name">Nombre Común:</label>
+        <input type="text" id="common_name" name="common_name" required>
+        <button type="submit">Firmar Certificado</button>
+    </form>
+    <div id="sign_cert_response"></div>
+
+    <h2>Comprobar Certificado</h2>
+    <form id="check_cert_form">
+        <label for="cert_path">Ruta del Certificado:</label>
+        <input type="text" id="cert_path" name="cert_path" required>
+        <button type="submit">Comprobar Certificado</button>
+    </form>
+    <div id="check_cert_response"></div>
+
+    <script>
+        // Manejo de la generación de la CA
+        $('#generate_ca_form').on('submit', function(event) {
+            event.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '/generate_ca',
+                success: function(response) {
+                    $('#generate_ca_response').html(response);
+                }
+            });
+        });
+
+        // Manejo de la firma de certificados
+        $('#sign_cert_form').on('submit', function(event) {
+            event.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '/sign_cert',
+                data: {
+                    common_name: $('#common_name').val()
+                },
+                success: function(response) {
+                    $('#sign_cert_response').html(response);
+                }
+            });
+        });
+
+        // Manejo de la comprobación de certificados
+        $('#check_cert_form').on('submit', function(event) {
+            event.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '/check_cert',
+                data: {
+                    cert_path: $('#cert_path').val()
+                },
+                success: function(response) {
+                    $('#check_cert_response').html(response);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
