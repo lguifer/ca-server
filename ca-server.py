@@ -10,6 +10,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
+import traceback  # Importa para obtener más detalles del error
+from cryptography.exceptions import InvalidSignature
 
 # Generar una clave privada RSA
 def generate_private_key():
@@ -146,8 +148,8 @@ def check_certificate(ca_cert, cert):
     current_time = datetime.datetime.now(datetime.timezone.utc)
 
     # Verificar las fechas de validez del certificado
-    if current_time < cert.not_valid_before.replace(tzinfo=datetime.timezone.utc) or \
-       current_time > cert.not_valid_after.replace(tzinfo=datetime.timezone.utc):
+    if current_time < cert.not_valid_before_utc.replace(tzinfo=datetime.timezone.utc) or \
+       current_time > cert.not_valid_after_utc.replace(tzinfo=datetime.timezone.utc):
         print("El certificado no es válido (fuera de las fechas de validez).")
         return False
     else:
@@ -163,8 +165,14 @@ def check_certificate(ca_cert, cert):
         )
         print("La firma del certificado es válida y está firmada por la CA.")
         return True
+    except InvalidSignature:
+        print("La firma del certificado no es válida.")
+        traceback.print_exc()  # Muestra más detalles de la excepción
+        return False
     except Exception as e:
-        print(f"La firma del certificado no es válida: {e}")
+        # Imprimir traza de error para entender mejor qué está ocurriendo
+        print("Ocurrió un error durante la verificación de la firma:")
+        traceback.print_exc()  # Muestra más detalles de la excepción
         return False
 
 # Función principal
@@ -200,13 +208,11 @@ def main():
 
     if args.command == "generate_ca":
         # Obtener las rutas de los directorios y limpiarlas
-        ca_key_directory = directories['ca_key_directory'].strip()
-        ca_cert_directory = directories['ca_cert_directory'].strip()
+        ca_directory = directories['ca_cert_directory'].strip()
         server_directory = directories['server_directory'].strip()
 
         # Crear directorios si no existen
-        os.makedirs(ca_key_directory, exist_ok=True)
-        os.makedirs(ca_cert_directory, exist_ok=True)
+        os.makedirs(ca_directory, exist_ok=True)
         os.makedirs(server_directory, exist_ok=True)
 
         # Obtener información de validez
@@ -229,10 +235,10 @@ def main():
         validity_days = int(config['cert']['validity_days'])
     
         # Cargar la clave privada de la CA
-        ca_private_key = load_private_key(config['directories']['ca_key_directory'] + "/ca_key.pem")
+        ca_private_key = load_private_key(config['directories']['ca_key_path'])
     
         # Cargar el certificado de la CA
-        ca_cert = load_cert(config['directories']['ca_cert_directory'] + "/ca_cert.pem")
+        ca_cert = load_cert(config['directories']['ca_cert_path'])
 
         # Firmar el certificado
         private_key, cert = sign_certificate(args.common_name, ca_private_key, ca_cert, validity_days)
@@ -247,10 +253,10 @@ def main():
     elif args.command == "check-cert":
         # Lógica para comprobar la validez de un certificado
         #server_key_path = f"{config['directories']['ca_key_path']}"
-        server_cert_path = f"{config['directories']['ca_cert_path']}"
+        ca_cert_path = f"{config['directories']['ca_cert_path']}"
         cert = load_cert(args.path)
-        ca_cert = load_cert(server_cert_path)
-        check_certificate(cert, ca_cert)  # Comprobar la validez del certificado
+        ca_cert = load_cert(ca_cert_path)
+        check_certificate(ca_cert, cert)  # Comprobar la validez del certificado
 
     elif args.command == "send_certs":
         # Lógica para enviar certificados
