@@ -1,141 +1,110 @@
-# **Guía de Uso: CA Tool - Generación y Firma de Certificados TLS**
+---
 
-Este script Python permite gestionar una Autoridad de Certificación (CA) interna, generar certificados TLS, y firmar certificados de servidores o clientes. Además, cuenta con la funcionalidad de enviar los certificados generados a una máquina remota usando `scp`.
+# FAQ - Herramienta de Gestión de Certificados
 
-## **Requisitos previos**
-1. **Python 3.6 o superior**: El script utiliza la librería `cryptography`, por lo que asegúrate de tener Python 3 instalado.
-2. **Librerías necesarias**:
-   - Instala las librerías necesarias con el siguiente comando:
+## 1. ¿Qué es esta herramienta?
+
+Esta herramienta permite gestionar una Autoridad de Certificación (CA) para generar y firmar certificados digitales. Los certificados pueden ser utilizados para asegurar comunicaciones y validar identidades en aplicaciones.
+
+## 2. ¿Cómo instalar la herramienta?
+
+1. **Requisitos previos**:
+   - Asegúrate de tener Python 3.x instalado en tu máquina.
+   - Instala las dependencias necesarias ejecutando:
      ```bash
-     pip install cryptography argparse
+     pip install cryptography
      ```
-3. **Acceso SSH**: Para enviar certificados a otras máquinas, debes tener configurado el acceso SSH a esas máquinas (por ejemplo, mediante claves SSH).
 
----
+2. **Clona el repositorio** o descarga los archivos de la herramienta en tu máquina.
 
-## **Uso General del Script**
+## 3. ¿Cómo se configura la herramienta?
 
-El script tiene dos funcionalidades principales:
-1. **Generar la CA**: Crear una clave privada y un certificado autofirmado para la CA.
-2. **Firmar certificados**: Generar certificados TLS (para servidores o clientes) y firmarlos con la CA generada.
+1. **Archivo de configuración**: La herramienta utiliza un archivo de configuración llamado `ca-server.conf`. Este archivo define los parámetros de validez de los certificados y las rutas para almacenar las claves y certificados.
+2. **Ejemplo de `ca-server.conf`**:
+   ```ini
+   [directories]
+   ca_key_path = ./ca/ca_key.pem
+   ca_cert_path = ./ca/ca_cert.pem
+   server_directory = ./server
 
-También, puedes usar la opción `--send-certs <IP>` para enviar los archivos generados a una máquina remota.
-
-### **Ejecución del Script**
-
-El script se invoca desde la línea de comandos, y acepta distintos subcomandos para realizar las acciones necesarias.
-
-### **Opciones del Script**
-
-1. **Generar la CA**
-   - Este comando genera una nueva CA (clave privada y certificado autofirmado).
-   - Archivos generados:
-     - La clave privada de la CA (`ca_key.pem`).
-     - El certificado de la CA (`ca_cert.pem`).
-
-   **Comando:**
-   ```bash
-   python ca_tool.py generate_ca --ca-key <ca_key_filename> --ca-cert <ca_cert_filename>
+   [cert]
+   validity_days = 365
    ```
 
-   **Parámetros:**
-   - `--ca-key`: Nombre del archivo donde se guardará la clave privada de la CA (por defecto: `ca_key.pem`).
-   - `--ca-cert`: Nombre del archivo donde se guardará el certificado de la CA (por defecto: `ca_cert.pem`).
+## 4. ¿Qué comandos están disponibles?
 
-   **Ejemplo:**
-   ```bash
-   python ca_tool.py generate_ca --ca-key my_ca_key.pem --ca-cert my_ca_cert.pem
-   ```
+- **Generar CA**: Crea una nueva Autoridad de Certificación.
+  ```bash
+  python ca-server.py generate_ca
+  ```
 
-   En este ejemplo, el archivo `my_ca_key.pem` contendrá la clave privada de la CA, y `my_ca_cert.pem` será el certificado autofirmado.
+- **Firmar un certificado**: Firma un certificado usando la CA.
+  ```bash
+  python ca-server.py sign_cert --common-name <nombre_comun>
+  ```
 
----
+- **Comprobar un certificado**: Verifica la validez de un certificado.
+  ```bash
+  python ca-server.py check-cert --path <ruta_certificado>
+  ```
 
-2. **Firmar Certificados de Servidor/Cliente**
-   - Este comando genera un certificado para un servidor o cliente y lo firma usando la CA previamente generada.
-   - Archivos generados:
-     - La clave privada del servidor o cliente (`server_key.pem`).
-     - El certificado firmado (`server_cert.pem`).
+- **Enviar certificados**: Envía certificados a una IP remota (a implementar).
+  ```bash
+  python ca-server.py send_certs --destination-ip <IP_destino> --cert-file <ruta_certificado> --key-file <ruta_clave_privada>
+  ```
 
-   **Comando:**
-   ```bash
-   python ca_tool.py sign_cert --common-name <common_name> --ca-key <ca_key_filename> --ca-cert <ca_cert_filename> --output-key <output_key_filename> --output-cert <output_cert_filename>
-   ```
+## 5. ¿Cómo generar una nueva CA?
 
-   **Parámetros:**
-   - `--common-name`: Nombre común (Common Name) que identifica al servidor o cliente (por ejemplo: `server.mydomain.com`).
-   - `--ca-key`: Archivo de la clave privada de la CA usada para firmar (por defecto: `ca_key.pem`).
-   - `--ca-cert`: Archivo del certificado de la CA (por defecto: `ca_cert.pem`).
-   - `--output-key`: Nombre del archivo donde se guardará la clave privada del servidor o cliente (por defecto: `server_key.pem`).
-   - `--output-cert`: Nombre del archivo donde se guardará el certificado firmado (por defecto: `server_cert.pem`).
+Ejecuta el siguiente comando en la terminal:
 
-   **Ejemplo:**
-   ```bash
-   python ca_tool.py sign_cert --common-name "server.mydomain.com" --ca-key my_ca_key.pem --ca-cert my_ca_cert.pem --output-key server_key.pem --output-cert server_cert.pem
-   ```
-
-   En este ejemplo, se genera un certificado para `server.mydomain.com` y se guardan los archivos `server_key.pem` (clave privada) y `server_cert.pem` (certificado firmado).
-
----
-
-3. **Enviar Certificados a una Máquina Remota con SCP**
-   - Este comando permite enviar automáticamente los certificados generados a otra máquina mediante `scp`.
-   - Requiere que tengas acceso SSH a la máquina remota.
-   
-   **Comando:**
-   ```bash
-   python ca_tool.py sign_cert --common-name <common_name> --ca-key <ca_key_filename> --ca-cert <ca_cert_filename> --output-key <output_key_filename> --output-cert <output_cert_filename> --send-certs <IP>
-   ```
-
-   **Parámetros Adicionales:**
-   - `--send-certs <IP>`: IP de la máquina destino donde se enviarán los archivos. Los certificados se copiarán al directorio `~/` del usuario remoto.
-
-   **Ejemplo:**
-   ```bash
-   python ca_tool.py sign_cert --common-name "server.mydomain.com" --ca-key my_ca_key.pem --ca-cert my_ca_cert.pem --output-key server_key.pem --output-cert server_cert.pem --send-certs 192.168.1.10
-   ```
-
-   En este ejemplo, además de firmar el certificado, el script enviará los archivos `server_key.pem` y `server_cert.pem` a la máquina con IP `192.168.1.10`.
-
----
-
-## **Errores Comunes y Soluciones**
-
-1. **Error: `subprocess.CalledProcessError` al usar `scp`**
-   - Este error ocurre si `scp` no puede conectarse a la máquina destino o si hay un problema de permisos.
-   - **Solución**: Asegúrate de que:
-     - Puedes conectarte a la máquina destino usando SSH sin problemas (posiblemente con claves SSH).
-     - El servicio SSH está corriendo en la máquina destino.
-     - Tienes permisos para escribir en el directorio de destino (`~/`).
-
-2. **Error: `FileNotFoundError` al cargar la clave o certificado de la CA**
-   - Este error ocurre si los archivos de la CA especificados (`--ca-key` o `--ca-cert`) no existen.
-   - **Solución**: Verifica que los nombres de los archivos sean correctos y que los archivos existen en el directorio desde donde estás ejecutando el script.
-
----
-
-## **FAQs**
-
-### 1. ¿Cómo sé que los certificados generados son válidos?
-El script utiliza el estándar `X.509` para la generación y firma de certificados. Los certificados generados serán válidos para su uso en TLS, y puedes verificarlos usando herramientas como `openssl`:
 ```bash
-openssl x509 -in server_cert.pem -text -noout
+python ca-server.py generate_ca
 ```
 
-### 2. ¿Qué pasa si pierdo los archivos de la CA?
-Es fundamental **proteger y hacer un respaldo** de los archivos de la CA (`ca_key.pem` y `ca_cert.pem`). Si pierdes la clave privada de la CA, no podrás firmar nuevos certificados ni validar los existentes.
+Esto generará una nueva clave privada y un certificado autofirmado, que se almacenará en las rutas especificadas en el archivo de configuración.
 
-### 3. ¿Qué hago si quiero cambiar el Common Name (CN) de un certificado?
-Si necesitas cambiar el `Common Name` de un certificado, simplemente usa el comando `sign_cert` con el nuevo valor de `--common-name` y genera un nuevo certificado.
+## 6. ¿Cómo firmar un certificado?
 
----
+Para firmar un certificado, utiliza el siguiente comando, reemplazando `<nombre_comun>` por el nombre deseado para el certificado:
 
-## **Resumen de Comandos**
+```bash
+python ca-server.py sign_cert --common-name <nombre_comun>
+```
 
-| Comando                                       | Descripción                                         |
-|-----------------------------------------------|-----------------------------------------------------|
-| `generate_ca`                                 | Genera una nueva CA (clave y certificado autofirmado). |
-| `sign_cert`                                   | Firma un certificado de servidor/cliente con la CA. |
-| `sign_cert --send-certs <IP>`                 | Firma un certificado y lo envía a una máquina remota. |
+Esto generará un nuevo certificado y clave privada, y los guardará en el directorio especificado.
+
+## 7. ¿Cómo comprobar la validez de un certificado?
+
+Para verificar si un certificado es válido, usa el siguiente comando:
+
+```bash
+python ca-server.py check-cert --path <ruta_certificado>
+```
+
+Esto comprobará si el certificado está dentro de las fechas de validez y si ha sido firmado por la CA.
+
+## 8. ¿Qué hacer si recibo un error sobre la firma del certificado?
+
+Si ves un error de "firma no válida", asegúrate de que:
+- Estás usando la clave pública correcta de la CA para verificar el certificado.
+- El certificado que estás verificando fue realmente firmado por la CA.
+
+Puedes usar OpenSSL para comprobar la firma de un certificado de la siguiente manera:
+
+```bash
+openssl verify -CAfile ca_cert.pem server/fwPaloAlto_cert.pem
+```
+
+## 9. ¿Dónde se almacenan las claves y certificados?
+
+Las rutas para almacenar las claves y certificados se definen en el archivo de configuración (`ca-server.conf`). Asegúrate de que estas rutas existan y tengan los permisos adecuados para que la herramienta pueda escribir en ellas.
+
+## 10. ¿Qué hacer si el archivo de configuración no se encuentra?
+
+Asegúrate de que el archivo `ca-server.conf` esté en el mismo directorio que el script de Python. Si no está presente, crea uno nuevo siguiendo el ejemplo proporcionado anteriormente.
+
+## 11. ¿Dónde puedo encontrar ayuda adicional?
+
+Para obtener más ayuda, consulta el código fuente de la herramienta, revisa los comentarios en el código y explora la documentación de la biblioteca `cryptography` en [cryptography.io](https://cryptography.io/en/latest/).
 
 ---
