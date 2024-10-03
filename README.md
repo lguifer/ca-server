@@ -1,7 +1,3 @@
-Aquí tienes la documentación detallada del script para que tus colegas puedan entender cómo funciona y utilizarlo sin problemas. Esta guía explica cada comando, argumento, y los pasos a seguir para generar certificados y usarlos en la infraestructura.
-
----
-
 # **Guía de Uso: CA Tool - Generación y Firma de Certificados TLS**
 
 Este script Python permite gestionar una Autoridad de Certificación (CA) interna, generar certificados TLS, y firmar certificados de servidores o clientes. Además, cuenta con la funcionalidad de enviar los certificados generados a una máquina remota usando `scp`.
@@ -143,5 +139,3 @@ Si necesitas cambiar el `Common Name` de un certificado, simplemente usa el coma
 | `sign_cert --send-certs <IP>`                 | Firma un certificado y lo envía a una máquina remota. |
 
 ---
-
-Con esta documentación, tus colegas tendrán todo lo necesario para generar certificados con este script, firmarlos, y enviarlos a servidores de destino mediante `scp`.
