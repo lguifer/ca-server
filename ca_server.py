@@ -17,6 +17,18 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.exceptions import InvalidSignature
 from cryptography.x509.oid import NameOID
 
+# Leer el archivo de configuración
+config = configparser.ConfigParser()
+config.read('ca-server.conf')
+
+#Variables globales
+crl_path = config['directories']['crl_path']
+ca_key_path = config['directories']['ca_key_path']
+ca_cert_path = config['directories']['ca_cert_path']
+validity_days = int(config['cert']['validity_days'])
+ca_directory = config['directories']['ca_directory'].strip()
+server_directory = config['directories']['server_directory'].strip()
+
 
 def create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path):
     """
@@ -31,17 +43,30 @@ def create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path):
     revoked_cert = x509.RevokedCertificateBuilder().serial_number(
         cert_to_revoke.serial_number
     ).revocation_date(
-        (datetime.datetime.now(timezone.utc))
+        datetime.datetime.now(datetime.timezone.utc)
     ).build(default_backend())
 
-    # Crear una nueva CRL
-    crl_builder = x509.CertificateRevocationListBuilder()
-    crl_builder = crl_builder.issuer_name(ca_cert.subject)
-    crl_builder = crl_builder.last_update(datetime.datetime.now(timezone.utc))
-    crl_builder = crl_builder.next_update(datetime.datetime.now(timezone.utc) + datetime.timedelta(days=30))
+    # Intenta cargar la CRL existente si existe
+    if os.path.exists(crl_path):
+        with open(crl_path, "rb") as f:
+            crl_data = f.read()
+            existing_crl = x509.load_pem_x509_crl(crl_data, default_backend())
+            crl_builder = x509.CertificateRevocationListBuilder().issuer_name(existing_crl.issuer)
+            
+            # Añadir los certificados revocados existentes a la nueva CRL
+            for revoked in existing_crl:
+                crl_builder = crl_builder.add_revoked_certificate(revoked)
+    else:
+        crl_builder = x509.CertificateRevocationListBuilder()
+        crl_builder = crl_builder.issuer_name(ca_cert.subject)
 
-    # Añadir el certificado revocado a la CRL
+    # Añadir el nuevo certificado revocado a la CRL
     crl_builder = crl_builder.add_revoked_certificate(revoked_cert)
+
+    # Establecer la fecha de la última actualización y la próxima actualización
+    current_time = datetime.datetime.now(datetime.timezone.utc)
+    crl_builder = crl_builder.last_update(current_time)
+    crl_builder = crl_builder.next_update(current_time + datetime.timedelta(days=30))
 
     # Firmar la CRL con la clave privada de la CA
     crl = crl_builder.sign(private_key=ca_private_key, algorithm=hashes.SHA256(), backend=default_backend())
@@ -51,6 +76,7 @@ def create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path):
         f.write(crl.public_bytes(serialization.Encoding.PEM))
 
     print(f"CRL actualizada y guardada en: {crl_path}")
+
 
 # Generar una clave privada RSA
 def generate_private_key():
@@ -182,7 +208,21 @@ def sign_certificate(common_name, ca_private_key, ca_cert, validity_days):
 
     return private_key, cert
 
-def check_certificate(ca_cert, cert):
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidSignature
+import datetime
+import traceback
+
+def check_certificate(ca_cert, cert, crl_path):
+    """
+    Comprueba si un certificado es válido y no ha sido revocado.
+
+    :param ca_cert: El certificado de la CA.
+    :param cert: El certificado a comprobar.
+    :param crl_path: La ruta al archivo CRL para comprobar la revocación.
+    :return: True si el certificado es válido y no ha sido revocado, False en caso contrario.
+    """
     # Obtener la hora actual con zona horaria UTC
     current_time = datetime.datetime.now(datetime.timezone.utc)
 
@@ -191,7 +231,6 @@ def check_certificate(ca_cert, cert):
        current_time > cert.not_valid_after_utc.replace(tzinfo=datetime.timezone.utc):
         #print("El certificado no es válido (fuera de las fechas de validez).")
         return False
-        #print("El certificado está dentro de las fechas de validez.")
 
     # Verificar que el certificado esté firmado por la CA
     try:
@@ -202,7 +241,6 @@ def check_certificate(ca_cert, cert):
             cert.signature_hash_algorithm,
         )
         #print("La firma del certificado es válida y está firmada por la CA.")
-        return True
     except InvalidSignature:
         #print("La firma del certificado no es válida.")
         traceback.print_exc()  # Muestra más detalles de la excepción
@@ -212,6 +250,39 @@ def check_certificate(ca_cert, cert):
         print("Ocurrió un error durante la verificación de la firma:")
         traceback.print_exc()  # Muestra más detalles de la excepción
         return False
+
+    # Verificar si el certificado ha sido revocado
+    if check_revocation(cert.serial_number, crl_path):
+        #print("El certificado ha sido revocado.")
+        return False
+
+    # Si todo ha pasado, el certificado es válido
+    return True
+
+def check_revocation(serial_number, crl_path):
+    """
+    Comprueba si un certificado ha sido revocado consultando la CRL.
+
+    :param serial_number: El número de serie del certificado a comprobar.
+    :param crl_path: La ruta al archivo CRL.
+    :return: True si el certificado ha sido revocado, False en caso contrario.
+    """
+    # Cargar la CRL desde el archivo
+    if not os.path.exists(crl_path):
+        print(f"CRL no encontrada en {crl_path}.")
+        return False
+
+    with open(crl_path, "rb") as f:
+        crl_data = f.read()
+        crl = x509.load_pem_x509_crl(crl_data, default_backend())
+
+    # Verificar si el número de serie está en la CRL
+    for revoked in crl:
+        if revoked.serial_number == serial_number:
+            return True  # El certificado ha sido revocado
+
+    return False  # El certificado no ha sido revocado
+
 
 def list_certificates(ca_cert, directory):
     """Lista y verifica los certificados firmados en el directorio dado."""
@@ -225,13 +296,14 @@ def list_certificates(ca_cert, directory):
 
             try:
                 # Verifica si el certificado es válido
-                if check_certificate(ca_cert, cert):
+                if check_certificate(ca_cert, cert, crl_path):
                     print(f"{cert_file}")
             except Exception as e:
                 # Si no es válido, no se muestra
                 print(f"{cert_file}: Inválido ({str(e)})")
 
 def main():
+    global ca_cert_path, ca_directory, server_directory, server_cert_path, server_key_path, ca_key_path
     parser = argparse.ArgumentParser(description="CA Tool: Generar CA y gestionar certificados.")
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
 
@@ -259,16 +331,13 @@ def main():
     parser_revoke = manage_subparsers.add_parser("revoke_cert", help="Revocar un certificado y actualizar la CRL.")
     parser_revoke.add_argument("--cert-path", required=True, help="Ruta del certificado a revocar.")
 
-    # Leer el archivo de configuración
-    config = configparser.ConfigParser()
-    config.read('ca-server.conf')
+   
 
     args = parser.parse_args()
 
     if args.command == "generate_ca":
         # Obtener las rutas de los directorios y limpiarlas
-        ca_directory = config['directories']['ca_cert_directory'].strip()
-        server_directory = config['directories']['server_directory'].strip()
+
 
         # Crear directorios si no existen
         os.makedirs(ca_directory, exist_ok=True)
@@ -291,44 +360,28 @@ def main():
 
     elif args.command == "manage-certificates":
         if args.manage_command == "sign_cert":
-            # Cargar la configuración
-            validity_days = int(config['cert']['validity_days'])
-        
-            # Cargar la clave privada de la CA
-            ca_private_key = load_private_key(config['directories']['ca_key_path'])
-        
-            # Cargar el certificado de la CA
-            ca_cert = load_cert(config['directories']['ca_cert_path'])
 
             # Firmar el certificado
             private_key, cert = sign_certificate(args.common_name, ca_private_key, ca_cert, validity_days)
         
             # Guardar los archivos generados
-            server_key_path = os.path.join(config['directories']['server_directory'], f"{args.common_name}_key.pem")
-            server_cert_path = os.path.join(config['directories']['server_directory'], f"{args.common_name}_cert.pem")
+            server_key_path = os.path.join(server_directory, f"{args.common_name}_key.pem")
+            server_cert_path = os.path.join(server_directory, f"{args.common_name}_cert.pem")
             save_to_files(private_key, cert, server_key_path, server_cert_path)
 
             print(f"Certificado firmado para '{args.common_name}' y guardado en {server_key_path} y {server_cert_path}")
 
         elif args.manage_command == "check_cert":
             # Lógica para comprobar la validez de un certificado
-            ca_cert_path = config['directories']['ca_cert_path']
             cert = load_cert(args.path)
             ca_cert = load_cert(ca_cert_path)
-            check_certificate(ca_cert, cert)  # Comprobar la validez del certificado
-
+            if check_certificate(ca_cert, cert, crl_path):  # Comprobar la validez del certificado
+                print("Certificado OK.")
+            else:
+                print("Certificado INVÁLIDO.")       
         elif args.manage_command == "list_certs":
-            # Cargar el certificado de la CA
-            ca_cert = load_cert(config['directories']['ca_cert_path'])
-            # Listar certificados firmados por la CA
-            server_directory = config['directories']['server_directory'].strip()
             list_certificates(ca_cert, server_directory)
-
         elif args.manage_command == "revoke_cert":
-            # Cargar la configuración
-            crl_path = config['directories']['crl_path']
-            ca_key_path = config['directories']['ca_key_path']
-            ca_cert_path = config['directories']['ca_cert_path']
 
             # Cargar el certificado a revocar, la clave privada y el certificado de la CA
             cert_to_revoke = load_cert(args.cert_path)
