@@ -30,6 +30,7 @@ ca_directory = config['directories']['ca_directory'].strip()
 server_directory = config['directories']['server_directory'].strip()
 
 
+
 def create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path):
     """
     Revoca un certificado y genera una CRL (Certificate Revocation List).
@@ -304,6 +305,7 @@ def list_certificates(ca_cert, directory):
 
 def main():
     global ca_cert_path, ca_directory, server_directory, server_cert_path, server_key_path, ca_key_path
+    ca_cert = load_cert(ca_cert_path)
     parser = argparse.ArgumentParser(description="CA Tool: Generar CA y gestionar certificados.")
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
 
@@ -373,8 +375,7 @@ def main():
 
         elif args.manage_command == "check_cert":
             # Lógica para comprobar la validez de un certificado
-            cert = load_cert(args.path)
-            ca_cert = load_cert(ca_cert_path)
+            cert = load_cert(args.path)          
             if check_certificate(ca_cert, cert, crl_path):  # Comprobar la validez del certificado
                 print("Certificado OK.")
             else:
