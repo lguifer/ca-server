@@ -1,110 +1,79 @@
----
 
-# FAQ - Herramienta de Gestión de Certificados
+# FAQ: Certificate Authority (CA) Web Tool using Flask and Cryptography
 
-## 1. ¿Qué es esta herramienta?
+## 1. What is the purpose of this tool?
+This tool provides a web interface for managing Certificate Authority (CA) functions such as generating a CA, signing certificates, checking their validity, listing certificates, and revoking certificates. It uses Flask for the web interface and the `cryptography` library for certificate management.
 
-Esta herramienta permite gestionar una Autoridad de Certificación (CA) para generar y firmar certificados digitales. Los certificados pueden ser utilizados para asegurar comunicaciones y validar identidades en aplicaciones.
+## 2. What libraries and technologies are used?
+- **Flask**: For creating the web interface.
+- **cryptography**: For handling certificate-related tasks such as generating keys, signing certificates, and creating Certificate Revocation Lists (CRLs).
+- **ConfigParser**: To read configuration settings from a `.conf` file.
+- **HTML/CSS (Bootstrap)**: For structuring and styling the user interface.
+- **Python Standard Libraries**: Including `datetime`, `os`, `subprocess`, and `traceback`.
 
-## 2. ¿Cómo instalar la herramienta?
+## 3. How do I configure the tool?
+The tool reads configurations from a file named `ca-server.conf`. It defines paths for certificates, keys, and CRLs, as well as certificate validity periods. Make sure the file includes the following sections:
+```ini
+[directories]
+ca_cert_path = /path/to/ca_cert.pem
+ca_key_path = /path/to/ca_key.pem
+ca_directory = /path/to/ca_directory
+server_directory = /path/to/server_directory
+crl_path = /path/to/crl.pem
 
-1. **Requisitos previos**:
-   - Asegúrate de tener Python 3.x instalado en tu máquina.
-   - Instala las dependencias necesarias ejecutando:
-     ```bash
-     pip install cryptography
-     ```
-
-2. **Clona el repositorio** o descarga los archivos de la herramienta en tu máquina.
-
-## 3. ¿Cómo se configura la herramienta?
-
-1. **Archivo de configuración**: La herramienta utiliza un archivo de configuración llamado `ca-server.conf`. Este archivo define los parámetros de validez de los certificados y las rutas para almacenar las claves y certificados.
-2. **Ejemplo de `ca-server.conf`**:
-   ```ini
-   [directories]
-   ca_key_path = ./ca/ca_key.pem
-   ca_cert_path = ./ca/ca_cert.pem
-   server_directory = ./server
-
-   [cert]
-   validity_days = 365
-   ```
-
-## 4. ¿Qué comandos están disponibles?
-
-- **Generar CA**: Crea una nueva Autoridad de Certificación.
-  ```bash
-  python ca-server.py generate_ca
-  ```
-
-- **Firmar un certificado**: Firma un certificado usando la CA.
-  ```bash
-  python ca-server.py sign_cert --common-name <nombre_comun>
-  ```
-
-- **Comprobar un certificado**: Verifica la validez de un certificado.
-  ```bash
-  python ca-server.py check-cert --path <ruta_certificado>
-  ```
-
-- **Enviar certificados**: Envía certificados a una IP remota (a implementar).
-  ```bash
-  python ca-server.py send_certs --destination-ip <IP_destino> --cert-file <ruta_certificado> --key-file <ruta_clave_privada>
-  ```
-
-## 5. ¿Cómo generar una nueva CA?
-
-Ejecuta el siguiente comando en la terminal:
-
-```bash
-python ca-server.py generate_ca
+[cert]
+validity_days = 365
 ```
 
-Esto generará una nueva clave privada y un certificado autofirmado, que se almacenará en las rutas especificadas en el archivo de configuración.
+## 4. What are the key features of the tool?
+- **Generate CA**: Creates a new CA by generating a private key and a self-signed CA certificate.
+- **Sign Certificate**: Signs a certificate for a server or client, creating both the private key and the certificate.
+- **List Certificates**: Displays a list of all the valid certificates in the configured directory.
+- **Check Certificate**: Verifies the validity of a given certificate, checking the signature and expiration.
+- **Revoke Certificate**: Revokes a certificate by adding it to the CRL.
 
-## 6. ¿Cómo firmar un certificado?
+## 5. How does certificate signing work?
+When signing a certificate:
+1. A private key is generated.
+2. The certificate's subject name is defined based on the input (e.g., common name).
+3. The certificate is signed using the CA's private key, and it is valid for the configured number of days.
+4. The certificate and private key are saved to disk in PEM format.
 
-Para firmar un certificado, utiliza el siguiente comando, reemplazando `<nombre_comun>` por el nombre deseado para el certificado:
+## 6. How can I revoke a certificate?
+The tool uses a CRL (Certificate Revocation List) to track revoked certificates. When a certificate is revoked, it is added to the CRL, and the CRL is updated. This CRL can then be distributed to clients or servers that need to check the status of a certificate.
 
+## 7. How do I check if a certificate is valid?
+The `check_certificate` function ensures that:
+1. The certificate is not expired.
+2. The certificate is signed by the CA.
+3. The certificate is not listed in the CRL.
+
+If all conditions are met, the certificate is considered valid.
+
+## 8. What does the configuration file do?
+The configuration file (`ca-server.conf`) specifies directories where CA keys, certificates, and CRLs are stored. It also includes parameters like the number of days the certificate is valid (`validity_days`).
+
+## 9. How are certificates listed?
+The tool scans the `server_directory` for files that match the pattern `*_cert.pem` and attempts to load each file as a certificate. It checks each certificate�s validity and, if valid, includes it in the displayed list.
+
+## 10. Can I customize the paths where keys and certificates are stored?
+Yes, you can customize these paths in the configuration file. The settings for `ca_cert_path`, `ca_key_path`, `server_directory`, and `ca_directory` define where files are stored and managed.
+
+## 11. How do I run the application?
+Ensure you have the required libraries installed:
 ```bash
-python ca-server.py sign_cert --common-name <nombre_comun>
+pip install flask cryptography configparser
 ```
 
-Esto generará un nuevo certificado y clave privada, y los guardará en el directorio especificado.
-
-## 7. ¿Cómo comprobar la validez de un certificado?
-
-Para verificar si un certificado es válido, usa el siguiente comando:
-
+Then, start the Flask app with:
 ```bash
-python ca-server.py check-cert --path <ruta_certificado>
+python app.py
 ```
 
-Esto comprobará si el certificado está dentro de las fechas de validez y si ha sido firmado por la CA.
+The application will be accessible via `http://127.0.0.1:5000/` in your web browser.
 
-## 8. ¿Qué hacer si recibo un error sobre la firma del certificado?
+## 12. What happens when I revoke a certificate?
+When you revoke a certificate, it is added to the CRL (Certificate Revocation List). The CRL is updated and saved to the path defined in `ca-server.conf`. Other services can check this CRL to ensure the certificate is no longer trusted.
 
-Si ves un error de "firma no válida", asegúrate de que:
-- Estás usando la clave pública correcta de la CA para verificar el certificado.
-- El certificado que estás verificando fue realmente firmado por la CA.
-
-Puedes usar OpenSSL para comprobar la firma de un certificado de la siguiente manera:
-
-```bash
-openssl verify -CAfile ca_cert.pem server/fwPaloAlto_cert.pem
-```
-
-## 9. ¿Dónde se almacenan las claves y certificados?
-
-Las rutas para almacenar las claves y certificados se definen en el archivo de configuración (`ca-server.conf`). Asegúrate de que estas rutas existan y tengan los permisos adecuados para que la herramienta pueda escribir en ellas.
-
-## 10. ¿Qué hacer si el archivo de configuración no se encuentra?
-
-Asegúrate de que el archivo `ca-server.conf` esté en el mismo directorio que el script de Python. Si no está presente, crea uno nuevo siguiendo el ejemplo proporcionado anteriormente.
-
-## 11. ¿Dónde puedo encontrar ayuda adicional?
-
-Para obtener más ayuda, consulta el código fuente de la herramienta, revisa los comentarios en el código y explora la documentación de la biblioteca `cryptography` en [cryptography.io](https://cryptography.io/en/latest/).
-
----
+## 13. How do I handle errors?
+Errors related to loading certificates or keys are logged using the `display_data()` function, which sends error messages to the web interface for better visibility.
