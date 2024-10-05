@@ -72,19 +72,16 @@
                 hasError = true;
                 //alert("seleccionado sign_cert")
                 //alert(commonName.value)
-                alert("activa error 1")
             }
 
             if (selectedCommand === 'check_cert' && (!path || path.value.trim() === "")) {
                 path.classList.add('error');
                 hasError = true;
-                alert("activa error 2")
             }
 
             if (selectedCommand === 'revoke_cert' && (!certPath || certPath.value === "")) {
                 certPath.classList.add('error');
                 hasError = true;
-                alert("activa error 3")
             }
 
             // Iterate through all input fields for alphanumeric validation
@@ -96,7 +93,6 @@
                 if (input.value.trim() != "" && !regex.test(input.value)) {
                     input.classList.add('error'); // Add error class if invalid
                     hasError = true;
-                    alert("activa error 4")
                 }
 
                 // Sanitize the input
@@ -105,7 +101,6 @@
 
             // Prevent form submission if any field is invalid
             if (hasError) {
-                alert("hay error")
                 event.preventDefault(); // Prevent form submission if validation fails
             }
         }
