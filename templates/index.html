@@ -46,8 +46,9 @@
         // Sanitize form inputs and validate before submitting
         function sanitizeForm(event) {
 
-            // Regular expression to allow only a-zA-Z0-9_
-            const regex = /^[a-zA-Z0-9_-]*$/;
+            // Regular expression to allow only a-z, A-Z, 0-9, underscore (_), period (.), hyphen (-), and backslash (\)
+            const regex = /^[a-zA-Z0-9_.\-\\]*$/;
+
 
             // Get all input fields in the form
             const inputs = document.querySelectorAll('input[type="text"], select');
@@ -165,8 +166,7 @@
             <div class="form-group">
                 <label for="manage_command">Select Action</label>
                 <select name="manage_command" id="manage_command" class="form-control">
-                    <option value="sign_cert">Sign Certificate</option>
-                    <option value="check_cert">Check Certificate</option>
+                    <option value="sign_cert">Sign Certificate</option>                   
                     <option value="list_certs">List Certificates</option>
                     <option value="revoke_cert">Revoke Certificate</option>
                 </select>

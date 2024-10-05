@@ -46,7 +46,7 @@ def display_data(data):
     data_lines = data.splitlines()  # Split the input data into lines
     table_rows += "".join(f"<tr><td>{line}</td></tr>" for line in data_lines)
     table_content = f"<table class='table table-bordered'><tbody>{table_rows}</tbody></table>"
-    return render_template('index.html', table_content=table_content)
+    #return render_template('index.html', table_content=table_content)
 def create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path):
     global buffer
     """
@@ -252,7 +252,7 @@ def check_revocation(serial_number, crl_path):
     return False
 
 def list_certificates(ca_cert, directory):
-    global buffer
+    buffer = ""
     cert_files = [f for f in os.listdir(directory) if f.endswith('_cert.pem')]
     
     if cert_files:
@@ -265,6 +265,8 @@ def list_certificates(ca_cert, directory):
                     buffer += (f"{cert_file}\n")
             except Exception as e:
                 pass
+    if buffer == "": buffer = "Certificates not found."
+    return buffer
 def get_certificates(ca_cert, directory):
     global crl_path
     certificates = []
@@ -327,6 +329,7 @@ def index():
             pass
         if command is None:
             manage_command = request.form.get('manage_command')
+            print(manage_command)
             if manage_command == "sign_cert":
                 common_name = request.form.get('common_name')
                 output_key = request.form.get('output_key', 'server_key.pem')
@@ -352,9 +355,9 @@ def index():
 
             elif manage_command == "list_certs":
                 # Logic to list signed certificates will be implemented here
-                list_certificates(ca_cert, server_directory)
+                buffer = list_certificates(ca_cert, server_directory)
                 display_data(buffer)
-                pass
+                #pass
 
             elif manage_command == "revoke_cert":
                 cert_path = request.form.get('cert_path')
@@ -368,6 +371,7 @@ def index():
                 
                 display_data(buffer)
                 pass
+    print(table_content)
 
     return render_template('index.html', table_content=table_content, certificates=certificates)
 
