@@ -72,13 +72,13 @@ def generate_ca():
     utils.display_data("SERVER folder OK")
 
     # Logic to generate the CA
-    ca_private_key = generate_private_key()
-    ca_cert = generate_ca_cert(ca_private_key, config.validity_days)
+    ca_private_key = crypto_utils.generate_private_key()
+    ca_cert = crypto_utils.generate_ca_cert(ca_private_key, config.validity_days)
         
     # Save the files in the correct directories
     ca_key_path = os.path.join(config.ca_directory, 'ca_key.pem')
     ca_cert_path = os.path.join(config.ca_directory, 'ca_cert.pem')
          
-    crytpo.utils.save_to_files(ca_private_key, ca_cert, ca_key_path, ca_cert_path)
+    crypto_utils.save_to_files(ca_private_key, ca_cert, ca_key_path, ca_cert_path)
     utils.display_data("CA Keys generated and saved in CA folder")
 
