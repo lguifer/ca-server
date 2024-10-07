@@ -1,4 +1,6 @@
 # Cryptography library imports
+from lib2to3.pytree import convert
+import OpenSSL
 from msilib import Table
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -17,9 +19,12 @@ import subprocess
 
 # Flask imports
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+import ssl
 
 # Config parser
 import configparser
+
+# SSL import
 
 from itsdangerous import NoneAlgorithm
 
@@ -39,6 +44,12 @@ crl_path = config['directories']['crl_path']
 table_content = ""
 table_rows = ""
 buffer = ""
+
+# TLS Configuration
+use_tls = config.getboolean('webserver', 'use_tls')
+use_mtls = config.getboolean('webserver', 'use_mtls')
+web_cert_path = config['webserver']['web_cert_path']
+web_key_path = config['webserver']['web_key_path']
 
 def display_data(data):
     global table_content, table_rows
@@ -115,6 +126,34 @@ def load_private_key(file_name="private_key.pem"):
             backend=default_backend()
         )
     return private_key
+
+def convert_pem_to_pfx(pem_cert, pem_key, pfx_output_path, password=None):
+    """
+    Converts PEM certificate and private key files to a PFX/PKCS#12 file.
+
+    :param pem_cert_path: Path to the PEM certificate file.
+    :param pem_key_path: Path to the PEM private key file.
+    :param pfx_output_path: Path where the output PFX file will be saved.
+    :param password: Optional password for encrypting the PFX file.
+    """
+    try:
+
+        # Convert to PFX/PKCS#12 format
+        key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, pem_key)
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_cert)
+        pkcs = OpenSSL.crypto.PKCS12()
+        pkcs.set_privatekey(key)
+        pkcs.set_certificate(cert)
+
+        with open(pfx_output_path, 'wb') as file:
+            file.write(pkcs.export(passphrase="mypassword".encode('ASCII'))) 
+        
+        print(f"PFX file saved at {pfx_output_path}")
+    
+    except Exception as e:
+        print(f"Error converting PEM to PFX: {e}")
+
+
 
 # Generate self-signed certificate for CA
 def generate_ca_cert(private_key, validity_days):
@@ -304,8 +343,6 @@ def index():
         command = request.form.get('command')
         print(f"command: {command}")
         if command == "generate_ca":
-            # Get the directory paths and clean them
-
             # Create directories if they do not exist
             os.makedirs(ca_directory, exist_ok=True)
             os.makedirs(server_directory, exist_ok=True)
@@ -344,6 +381,8 @@ def index():
                 server_cert_path = os.path.join(server_directory, f"{common_name}_cert.pem")
                 print(f"{server_key_path}, {server_cert_path}")
                 save_to_files(private_key, cert, server_key_path, server_cert_path)
+                pfx_path = os.path.join(server_directory, f"{common_name}.pfx")
+                convert_pem_to_pfx(load_private_key(server_key_path),load_cert(server_cert_path), pfx_path)
 
                 display_data(f"Signed certificate for '{common_name}' and saved at {server_key_path} and {server_cert_path}")
                 pass
@@ -376,4 +415,8 @@ def index():
     return render_template('index.html', table_content=table_content, certificates=certificates)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+
+        print("Running without TLS (HTTP).")
+        app.run(host='0.0.0.0', port=5000, debug=True)
+
+
