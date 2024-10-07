@@ -150,7 +150,8 @@ def create_certificate(common_name, output_key, output_cert):
     server_cert_path = os.path.join(config.server_directory, f"{common_name}_cert.pem")
     print(f"{server_key_path}, {server_cert_path}")
     crypto_utils.save_to_files(private_key, cert, server_key_path, server_cert_path)
-    utils.display_data(f"Signed certificate for '{common_name}' and saved at {server_key_path} and {server_cert_path}")
+    crypto_utils.convert_pem_to_pfx(server_key_path, server_cert_path)
+    utils.display_data(f"Signed certificate for '{common_name}' and saved at {server_key_path} and {server_cert_path} and .pfx")
 
 def revoke_certificate(cert_path):
     # Load certificate to revoke, private key, and CA Cert
@@ -158,3 +159,4 @@ def revoke_certificate(cert_path):
     ca_private_key = crypto_utils.load_private_key(config.ca_key_path)
     # Create or update the CRL
     ca.create_crl(ca_private_key, ca_cert, cert_to_revoke, crl_path)
+
