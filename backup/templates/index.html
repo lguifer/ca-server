@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CA Tool</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Add a style for error border */
+        .error {
+            border: 2px solid red;
+        }
+    </style>
+    <script>
+        // Function to sanitize inputs by removing unwanted characters
+        function sanitizeInput(value) {
+            const temp = document.createElement('div');
+            temp.textContent = value;
+            return temp.innerHTML;
+        }
+
+        // Show/Hide fields based on selected option
+        function updateForm() {
+            const selectedCommand = document.getElementById('manage_command').value;
+
+            // Hide all fields initially
+            document.getElementById('common_name_group').style.display = 'none';
+            document.getElementById('path_group').style.display = 'none';
+            document.getElementById('cert_path_group').style.display = 'none';
+            document.getElementById('output_key_group').style.display = 'none';
+            document.getElementById('output_cert_group').style.display = 'none';
+
+            // Show fields based on selection
+            if (selectedCommand === 'sign_cert') {
+                document.getElementById('common_name_group').style.display = 'block';
+                document.getElementById('output_key_group').style.display = 'block';
+                document.getElementById('output_cert_group').style.display = 'block';
+            } else if (selectedCommand === 'check_cert') {
+                document.getElementById('path_group').style.display = 'block';
+            } else if (selectedCommand === 'revoke_cert') {
+                document.getElementById('cert_path_group').style.display = 'block';
+            }
+        }
+
+        // Sanitize form inputs and validate before submitting
+        function sanitizeForm(event) {
+
+            // Regular expression to allow only a-z, A-Z, 0-9, underscore (_), period (.), hyphen (-), and backslash (\)
+            const regex = /^[a-zA-Z0-9_.\-\\]*$/;
+
+
+            // Get all input fields in the form
+            const inputs = document.querySelectorAll('input[type="text"], select');
+            let hasError = false;
+
+            // Get the selected command
+            const selectedCommand = document.getElementById('manage_command').value;
+
+            // Specific inputs
+            const commonName = document.getElementById('common_name');
+            const path = document.getElementById('path');
+            const certPath = document.getElementById('cert_path');
+
+            // Reset error styles for specific inputs
+            commonName?.classList.remove('error');
+            path?.classList.remove('error');
+            certPath?.classList.remove('error');
+
+            // Validate specific fields based on selected command
+            if (selectedCommand === 'sign_cert' && (commonName.value.trim() === "")) {
+                commonName.classList.add('error');
+                hasError = true;
+                //alert("seleccionado sign_cert")
+                //alert(commonName.value)
+            }
+
+            if (selectedCommand === 'check_cert' && (!path || path.value.trim() === "")) {
+                path.classList.add('error');
+                hasError = true;
+            }
+
+            if (selectedCommand === 'revoke_cert' && (!certPath || certPath.value === "")) {
+                certPath.classList.add('error');
+                hasError = true;
+            }
+
+            // Iterate through all input fields for alphanumeric validation
+            inputs.forEach(function(input) {
+                // Reset error styles
+                //input.classList.remove('error');
+
+                // Check if the input value contains only valid characters (a-zA-Z0-9_)
+                if (input.value.trim() != "" && !regex.test(input.value)) {
+                    input.classList.add('error'); // Add error class if invalid
+                    hasError = true;
+                }
+
+                // Sanitize the input
+                input.value = sanitizeInput(input.value);
+            });
+
+            // Prevent form submission if any field is invalid
+            if (hasError) {
+                event.preventDefault(); // Prevent form submission if validation fails
+            }
+        }
+
+        // Prevent form submission when Enter is pressed
+        function preventEnterKey(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Prevent default Enter key behavior
+            }
+        }
+
+        // Confirm action for generating CA only for the specific button
+        function confirmGenerateCA(event) {
+            const isConfirmed = confirm("Are you sure you want to generate a CA?");
+            if (!isConfirmed) {
+                event.preventDefault(); // Prevent form submission if not confirmed
+            }
+        }
+
+        // Run when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update form on command change
+            document.getElementById('manage_command').addEventListener('change', updateForm);
+            // Run sanitization and validation on form submit            
+            document.querySelector('form').addEventListener('submit', function(event) {
+                const submitter = event.submitter; // Identify which button triggered the form submission
+
+                // Check which button triggered the form submission
+                if (submitter.id === 'manage-certs') {
+                    sanitizeForm(event); // Call the sanitizeForm function
+                } else if (submitter.id === 'generate_ca') {
+                    confirmGenerateCA(event); // Call the confirmGenerateCA function
+                }
+            });
+            // Prevent form submission when Enter key is pressed
+            document.querySelector('form').addEventListener('keydown', preventEnterKey);
+
+            // Initialize form
+            updateForm();
+        });
+    </script>
+
+<!-- Add this style to highlight errors -->
+<style>
+    .error {
+        border: 2px solid red;
+    }
+</style>
+
+</head>
+<body>
+    <div class="form-container">
+        <h1>Certificate Authority Tool</h1>
+
+        <!-- Section to generate CA -->
+        <form method="POST">
+            <h2>Generate CA</h2>
+            <button type="submit" class="btn btn-primary btn-block" name="command" id="generate_ca" value="generate_ca">Generate CA</button>
+
+            <!-- Section to manage certificates -->
+            <h2>Manage Certificates</h2>
+            <div class="form-group">
+                <label for="manage_command">Select Action</label>
+                <select name="manage_command" id="manage_command" class="form-control">
+                    <option value="sign_cert">Sign Certificate</option>                   
+                    <option value="list_certs">List Certificates</option>
+                    <option value="revoke_cert">Revoke Certificate</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="common_name_group">
+                <label for="common_name">Common Name (for sign_cert)</label>
+                <input type="text" name="common_name" id="common_name" class="form-control" placeholder="Common Name">
+            </div>
+
+            <div class="form-group" id="path_group">
+                <label for="path">Path (for check_cert)</label>
+                <input type="text" name="path" id="path" class="form-control" placeholder="Path">
+            </div>
+
+            <div class="form-group" id="cert_path_group">
+                <label for="cert_path">Cert Path (for revoke_cert)</label>
+                <select name="cert_path" id="cert_path" class="form-control">
+                    <option value="revoke-cert-selected" disabled selected>Select a Certificate</option>
+                    {% for cert in certificates %}
+                        <option value="{{ cert['path'] }}">{{ cert['name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="output_key_group">
+                <label for="output_key">Output Key</label>
+                <input type="text" name="output_key" id="output_key" class="form-control" placeholder="Output Key">
+            </div>
+
+            <div class="form-group" id="output_cert_group">
+                <label for="output_cert">Output Cert</label>
+                <input type="text" name="output_cert" id="output_cert" class="form-control" placeholder="Output Cert">
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block" id="manage-certs">Submit</button>
+        </form>
+    </div>
+
+    <div class="output-container">
+        <h2>Output Data</h2>
+        <div class="output-table">
+            <!-- Placeholder to display table content -->
+            {{ table_content|safe }}
+        </div>
+    </div>
+</body>
+</html>
