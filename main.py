@@ -43,22 +43,21 @@ def index():
 
 if __name__ == '__main__':
     # Determine whether to run with HTTP, HTTPS, or mTLS based on configuration
-    if app_config.use_tls:
-        if app_config.use_mtls:
-            print("Running with mTLS (mutual TLS).")
-            # Configure mTLS: both server and client will verify certificates
-            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            context.load_cert_chain(certfile=app_config.web_cert_path, keyfile=app_config.web_key_path)
-            context.load_verify_locations(cafile=app_config.ca_cert_path)
-            context.verify_mode = ssl.CERT_REQUIRED
-            app.run(host='0.0.0.0', port=5000, debug=True, ssl_context=context)
-        else:
+    if app_config.use_tls == 'mtls':
+        print("Running with mTLS (mutual TLS).")
+        # Configure mTLS: both server and client will verify certificates
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.load_cert_chain(certfile=app_config.web_cert_path, keyfile=app_config.web_key_path)
+        context.load_verify_locations(cafile=app_config.ca_cert_path)
+        context.verify_mode = ssl.CERT_REQUIRED
+        app.run(host=app_config.IP, port=app_config.port, ssl_context=context)
+    elif app_config.use_tls == 'tls':
             print("Running with TLS (HTTPS).")
             # Only configure TLS (HTTPS)
             context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             context.load_cert_chain(certfile=app_config.web_cert_path, keyfile=app_config.web_key_path)
-            app.run(host='0.0.0.0', port=5000, debug=True, ssl_context=context)
+            app.run(host=app_config.IP, port=app_config.port, ssl_context=context)
     else:
         print("Running without TLS (HTTP).")
         # Run HTTP server (no TLS)
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host=app_config.IP, port=app_config.port, debug=True)

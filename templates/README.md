@@ -13,7 +13,7 @@ This tool allows users to generate a Certificate Authority (CA) and manage certi
 The tool uses a JavaScript function called `sanitizeInput()` to strip out any potentially dangerous characters from user inputs. The input is treated as text content, which prevents script injection attacks. Additionally, a regular expression is used to allow only alphanumeric characters, underscores, periods, hyphens, and backslashes.
 
 ## 4. What are the available actions in the tool?
-- **Sign Certificate**: Sign a certificate with the generated CA.
+- **Generate and sign Certificate**: Generate and sign a certificate with the generated CA.
 - **List Certificates**: View a list of existing certificates.
 - **Revoke Certificate**: Revoke an existing certificate.
 
