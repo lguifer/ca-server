@@ -34,16 +34,50 @@ chmod +x install_packages.sh
 
 ## Configuration
 
-The configuration file `ca-server.conf` must contain the following fields:
+The `ca-server.conf` file is essential for the proper operation of the Certificate Authority (CA) server. It should contain the following structure, with different sections that configure both the CA and the web server. Below is a detailed explanation of each field:
 
-- `ca_key_path`: Path to the CA private key.
-- `ca_cert_path`: Path to the CA certificate.
-- `use_tls`: Enable or disable TLS (True/False).
-- `use_mtls`: Enable or disable mutual TLS (True/False).
-- `web_cert_path`: Path to the server certificate.
-- `web_key_path`: Path to the server private key.
-- `ca_directory`: Directory for storing CA files.
-- `crl_path`: Path for the certificate revocation list.
+### Sections of the Configuration File
+
+#### `[ca]`
+
+This section contains the basic information about the Certificate Authority (CA):
+
+- `country`: The country where the CA is registered, for example, `"ES"` for Spain.
+- `state`: The state or province where the CA is located, for example, `"Madrid"`.
+- `locality`: The locality or city where the CA is based, for example, `"Madrid"`.
+- `organization`: The name of the organization that owns the CA, for example, `"Example"`.
+- `common_name`: The common name that identifies the CA, usually used for the root certificate, for example, `"Example Root CA"`.
+
+#### `[cert]`
+
+This section sets parameters for the certificates issued by the CA:
+
+- `validity_days`: The number of days that the issued certificates will be valid, for example, `3650` for a certificate valid for 10 years.
+- `key_size`: The size (in bits) of the keys generated for certificates. Common values are `2048` or `4096` bits.
+
+#### `[directories]`
+
+This section defines the paths where key and certificate files will be stored:
+
+- `ca_key_path`: The path to the CA’s private key file, for example, `ca/ca_key.pem`.
+- `ca_cert_path`: The path to the CA’s public certificate file, for example, `ca/ca_cert.pem`.
+- `ca_directory`: The directory where CA-related files (keys, certificates) are stored, for example, `ca/`.
+- `server_directory`: The directory where server-related files are stored, for example, `server/`.
+- `crl_path`: The path where the Certificate Revocation List (CRL) is stored, for example, `ca/crl`.
+
+#### `[webserver]`
+
+This section defines the configuration for the web server, which will manage the CA operations through a web interface:
+
+- `IP`: The IP address where the web server will bind, for example, `0.0.0.0` to listen on all interfaces. Other values could be specific IPs like `127.0.0.1` (localhost) or a private IP like `192.168.10.10`.
+- `port`: The port on which the web server will run. Typically, `443` for HTTPS, but it can be changed.
+- `use_tls`: Specifies whether to use TLS (Transport Layer Security) for secure communication. Valid values:
+  - `none`: No TLS (HTTP only).
+  - `tls`: Enables TLS (HTTPS).
+  - `mtls`: Enables mutual TLS (both client and server authentication).
+- `web_key_path`: The path to the server’s private key, used for TLS or mTLS, for example, `CA-server_key.pem`.
+- `web_cert_path`: The path to the server’s certificate, used for TLS or mTLS, for example, `CA-server_cert.pem`.
+
 
 ## Running the Application
 
