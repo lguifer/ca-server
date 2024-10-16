@@ -73,7 +73,7 @@ def generate_ca():
 
     # Logic to generate the CA
     ca_private_key = crypto_utils.generate_private_key()
-    ca_cert = crypto_utils.generate_ca_cert(ca_private_key, config.validity_days)
+    ca_cert = crypto_utils.generate_ca_cert(ca_private_key)
         
     # Save the files in the correct directories
     ca_key_path = os.path.join(config.ca_directory, 'ca_key.pem')

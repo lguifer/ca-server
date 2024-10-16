@@ -77,7 +77,7 @@ def convert_pem_to_pfx(private_key_path, public_cert_path):
     print("Success.")
 
 
-def generate_ca_cert(private_key, config):
+def generate_ca_cert(private_key):
     """
     Generates a CA certificate using the configuration provided.
 
@@ -86,7 +86,7 @@ def generate_ca_cert(private_key, config):
     :return: An X509 certificate object.
     """
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, u"{}".format(config.country)),
+        x509.NameAttribute(NameOID.COUNTRY_NAME, u"{}".config.country),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"{}".format(config.state)),
         x509.NameAttribute(NameOID.LOCALITY_NAME, u"{}".format(config.locality)),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"{}".format(config.organization)),
