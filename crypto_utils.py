@@ -47,7 +47,7 @@ def save_to_files(private_key, cert, key_filename, cert_filename):
 def generate_private_key():
     return rsa.generate_private_key(
         public_exponent=65537,
-        key_size=2048,
+        key_size=config.key_size,
         backend=default_backend()
     )
 def convert_pem_to_pfx(private_key_path, public_cert_path):
@@ -77,16 +77,32 @@ def convert_pem_to_pfx(private_key_path, public_cert_path):
     print("Success.")
 
 
-def generate_ca_cert(private_key, validity_days):
+def generate_ca_cert(private_key, config):
+    """
+    Generates a CA certificate using the configuration provided.
+
+    :param private_key: The private key used to sign the certificate.
+    :param config: A Config object containing the CA and certificate data.
+    :return: An X509 certificate object.
+    """
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, u"ES"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Madrid"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, u"Madrid"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Example"),
-        x509.NameAttribute(NameOID.COMMON_NAME, u"Example Root CA"),
+        x509.NameAttribute(NameOID.COUNTRY_NAME, u"{}".format(config.country)),
+        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"{}".format(config.state)),
+        x509.NameAttribute(NameOID.LOCALITY_NAME, u"{}".format(config.locality)),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"{}".format(config.organization)),
+        x509.NameAttribute(NameOID.COMMON_NAME, u"{}".format(config.common_name)),
     ])
     
     now = datetime.datetime.now(datetime.timezone.utc)
-    return x509.CertificateBuilder().subject_name(subject).issuer_name(issuer).public_key(private_key.public_key()).serial_number(
-        x509.random_serial_number()).not_valid_before(now).not_valid_after(now + datetime.timedelta(days=validity_days)).add_extension(
-        x509.BasicConstraints(ca=True, path_length=None), critical=True).sign(private_key, hashes.SHA256(), default_backend())
+    
+    return x509.CertificateBuilder()\
+        .subject_name(subject)\
+        .issuer_name(issuer)\
+        .public_key(private_key.public_key())\
+        .serial_number(x509.random_serial_number())\
+        .not_valid_before(now)\
+        .not_valid_after(now + datetime.timedelta(days=config.validity_days))\
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=None), critical=True
+        )\
+        .sign(private_key, hashes.SHA256(), default_backend())
